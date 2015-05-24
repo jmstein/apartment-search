@@ -41,9 +41,9 @@ def get_amenities(type, html):
 
 for line in sys.stdin.readlines():
 	html = urlopen(line).read()
-	address = re.sub('\s*\#.*', '', re.search('<title>StreetEasy: ([^-]+) -', html).group(1))
+	address = re.sub('\s*\#.*', '', re.search('class="incognito">([^<]+)</a>', html).group(1))
 	bedrooms = re.search('(\d\.?5?) bed', html).group(1)
-	onMarket = re.search('(\d+) days on market', html).group(1)
+	onMarket = re.search('(\d+) days? on StreetEasy', html).group(1)
 
 	distances = []
 	if INCLUDE_DISTANCES:
