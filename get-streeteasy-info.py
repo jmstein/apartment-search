@@ -68,11 +68,11 @@ def scrape_streeteasy(url):
 		bathrooms = bathsMatcher.group(1)
 	else:
 		bathrooms = '?'
-	sizeMatcher = re.search('(\d+\.?\d?) ft', html)
+	sizeMatcher = re.search('<span class=["\']detail_cell[^>]*>(\d+\.?\d?) ft', html)
 	if sizeMatcher:
 		size = sizeMatcher.group(1)
 	else:
-		sizeMatcher = re.search('(\d+)\s*[, ]\s*(\d+) ft', html)
+		sizeMatcher = re.search('<span class=["\']detail_cell[^>]*>(\d+)\s*[, ]\s*(\d+) ft', html)
 		if sizeMatcher:
 			size = str(1000 * int(sizeMatcher.group(1)) + sizeMatcher.group(2))
 		else:
