@@ -4,7 +4,11 @@ import time
 from urllib import urlopen
 from urllib import quote_plus
 
-INCLUDE_DISTANCES = False
+# from pyquery import PyQuery as pq
+# from lxml import etree
+#import urllib
+
+INCLUDE_DISTANCES = True
 
 JOEL_WORK = '1 Madison Ave, 10010'
 NICOLE_WORK = '55 Washington St, Brooklyn, NY'
@@ -39,20 +43,25 @@ def get_amenities(type, html):
 		return re.sub('\s+', ' ', re.sub('<[^>]+>', ' ', matched)).strip()
 	return ''
 
-for line in sys.stdin.readlines():
-	html = urlopen(line).read()
-	address = re.sub('\s*\#.*', '', re.search('class="incognito">([^<]+)</a>', html).group(1))
-	bedrooms = re.search('(\d\.?5?) bed', html).group(1)
-	onMarket = re.search('(\d+) days? on StreetEasy', html).group(1)
-
+def calculate_distances(address):
 	distances = []
 	if INCLUDE_DISTANCES:
 		for office in OFFICES:
 			for mode in TRANSIT_MODES:
 				distances += [get_distance(address + ', new york', office, mode, '1359563400')]
+	return distances
+
+
+def scrape_streeteasy(url):
+	html = urlopen(url).read()
+
+	address = re.sub('\s*\#.*', '', re.search('class="incognito">([^<]+)</a>', html).group(1))
+	bedrooms = re.search('(\d\.?5?) bed', html).group(1)
+	onMarket = re.search('(\d+) days? on StreetEasy', html).group(1)
+
+	distances = calculate_distances(address)
 
 	price = re.sub(',', '', re.search('\\$(\d,\d{3})', html).group(1))
-	url = line.strip()
 
 	bathsMatcher = re.search('(\d\.?5?) bath', html)
 	if bathsMatcher:
@@ -98,4 +107,59 @@ for line in sys.stdin.readlines():
 	amenities.strip()
 	
 	print ",".join([address, onMarket, price] + distances + [url, fee, email, bedrooms, bathrooms, size, rooms, amenities])
+
+def scrape_padmapper(url):
+	html = urlopen(url).read()
+
+	real_url = re.search('id="frame" src="([^<]+)"', html).group(1)
+	frame_html = urlopen(real_url).read()
+
+	def get_field(field):
+		return re.search('<h5>' + field + '</h5>([^<]+)</li>', frame_html).group(1).strip()
+
+	price = get_field('Price').replace('$', '')
+	bedrooms = get_field('Bedrooms')
+	address = get_field('Address').split(',')[0]
+	bathrooms = get_field('Bathrooms').split(' ')[0]
+
+	distances = calculate_distances(address)
+
+	isFee = get_field('Broker Fee\?')
+	if isFee != "Yes":
+		fee = '0'
+	else:
+		fee = price
+
+	email = re.search('mailto:([^"]+)"', frame_html).group(1).strip()
+
+	print ",".join([address, "", price] + distances + [url, fee, email, bedrooms, bathrooms, "", "", ""])
+
+
+def scrape_nybits(line):
+	print "scraping nybits"
+
+
+WEBSITES = [
+	{
+		"name": "streeteasy",
+		"url": "http://streeteasy.com",
+		"function": scrape_streeteasy
+	},
+	{
+		"name": "nybits",
+		"url": "http://www.nybits.com/",
+		"function": scrape_nybits
+	},
+	{
+		"name": "padmapper",
+		"url": "http://www.padmapper.com",
+		"function": scrape_padmapper
+	}
+]
+
+for line in sys.stdin.readlines():
+	for website in WEBSITES:
+		if website["name"] in line:
+			website["function"](line.strip())
+	
 	sys.stdout.flush()
