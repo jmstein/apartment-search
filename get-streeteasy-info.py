@@ -1,6 +1,7 @@
 import re
 import sys
 import time
+import urllib2
 from urllib import urlopen
 from urllib import quote_plus
 
@@ -15,6 +16,10 @@ NICOLE_WORK = '55 Washington St, Brooklyn, NY'
 OFFICES = [JOEL_WORK, NICOLE_WORK]
 TRANSIT_MODES = ['walking', 'transit']
 # (1359563400, 1359558000)
+
+def fetch_url(url):
+	req = urllib2.Request(url, headers={ 'User-Agent': 'Mozilla/5.0' })
+	return urllib2.urlopen(req).read()
 
 def make_full_url(url):
 	return "http://streeteasy.com" + url
@@ -135,8 +140,27 @@ def scrape_padmapper(url):
 	print ",".join([address, "", price] + distances + [url, fee, email, bedrooms, bathrooms, "", "", ""])
 
 
-def scrape_nybits(line):
-	print "scraping nybits"
+def scrape_nybits(url):
+	html = fetch_url(url)
+
+	address = re.search('([\w\s]+)[^>]+<a href="[^"]+">map</a>', html).group(1).strip()
+
+	# listing is obfuscated
+	price = ""
+	fee = ""
+	
+	bedrooms = ""
+	size = ""
+
+	email = ""
+
+	onMarket = ""
+
+	distances = calculate_distances(address)
+
+	
+
+	print ",".join([address, onMarket, price] + distances + [url, fee, email, bedrooms, "", size, "", ""])
 
 
 WEBSITES = [
